@@ -1,0 +1,2 @@
+#!/bin/zsh
+pyinstaller --onefile main.py
