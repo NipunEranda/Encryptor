@@ -74,3 +74,4 @@ pylint-global.rc
 venv/
 
 **/*.pem
+# **/*.json
