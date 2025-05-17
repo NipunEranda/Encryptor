@@ -3,21 +3,12 @@ from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.backends import default_backend
-from scripts.key_generator import generate_aes_key
+from scripts.key_generator import generate_aes_keys
 import os
 
-def encrypt(data, public_key, aes_key, iv):
-    # Convert string data to bytes if it isn't already
-    if isinstance(data, str):
-        data = data.encode('utf-8')
-    
+def encrypt_aes(public_key, aes_key, iv):
     cipher = Cipher(algorithms.AES(aes_key), modes.CBC(iv))
     encryptor = cipher.encryptor()
-    
-    pad_len = 16 - (len(data) % 16)
-    padded_plaintext = data + bytes([pad_len] * pad_len)
-
-    ciphertext = encryptor.update(padded_plaintext) + encryptor.finalize()
     
     encrypted_aes_key = public_key.encrypt(
         aes_key,
@@ -27,6 +18,20 @@ def encrypt(data, public_key, aes_key, iv):
             label=None
         )
     )
+    
+    return encrypted_aes_key, encryptor
+
+def encrypt(data, public_key, aes_key, iv):
+    if isinstance(data, str):
+        data = data.encode('utf-8')
+        
+    encrypted_aes_key, encryptor = encrypt_aes(public_key, aes_key, iv)
+        
+    pad_len = 16 - (len(data) % 16)
+    padded_plaintext = data + bytes([pad_len] * pad_len)
+
+    ciphertext = encryptor.update(padded_plaintext) + encryptor.finalize()
+    
     print("File encrypted successfully.")
     return encrypted_aes_key, iv, ciphertext
 
@@ -46,4 +51,4 @@ def decrypt(encrypted_data, private_key, encrypted_aes_key, iv):
     pad_len = decrypted_padded[-1]
     decrypted = decrypted_padded[:-pad_len]
 
-    return decrypted.decode()
+    return decrypted

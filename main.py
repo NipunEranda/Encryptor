@@ -1,81 +1,173 @@
-from scripts.key_generator import generate_keys, generate_aes_key, save_encryption_config, load_encryption_config
-from scripts.encryption import encrypt, decrypt
-from cryptography.hazmat.primitives import serialization, hashes
-from cryptography.hazmat.primitives.asymmetric import padding
-import argparse
+from tkinter import *
+from tkinter import filedialog
+from tkinter import messagebox
 import os
+import os.path
 import sys
+import subprocess
+import multiprocessing
 
-def parse_arguments():
-    parser = argparse.ArgumentParser(description='Encrypt and decrypt data using RSA and AES')
-    parser.add_argument('--mode', choices=['encrypt', 'decrypt'], required=True,
-                       help='Mode of operation: encrypt or decrypt')
-    parser.add_argument('--data', required=True,
-                       help='Data to encrypt/decrypt')
-    parser.add_argument('--generate-keys', action='store_true',
-                       help='Generate new key pairs')
-    return parser.parse_args()
+from scripts.key_generator import read_keys, generate_aes_keys, save_encryption_config, generate_rsa_keypair, load_encryption_config
+from scripts.encryption import encrypt, decrypt, encrypt_aes
+
+if sys.platform == "win32":
+    FILEBROWSER_PATH = "explorer"
+elif sys.platform == "darwin":
+    FILEBROWSER_PATH = "open"
+else:
+    FILEBROWSER_PATH = "xdg-open"
+    
+folder_selected = 'FOLDER PATH'
+processes = []
+processCount = 10
+
+def allfiles():
+    allFiles = []
+    if folder_selected != 'FOLDER PATH':
+        for root, subfiles, files in os.walk(folder_selected):
+            for names in files:
+                if not names == "crypt.py":
+                    allFiles.append(os.path.join(root, names))
+
+    global selected_files
+    selected_files = allFiles
+    return allFiles
+
+def browseFolder():
+    global folder_selected
+    folder_selected = filedialog.askdirectory()
+    if folder_selected == '':
+        folder_selected = 'FOLDER PATH'
+        resetAll()
+    else:
+        path["text"] = folder_selected
+        listbox.delete(0,END)
+        for f, file in enumerate(allfiles()):
+            listbox.insert(f, file)
+        path.grid(row=0, column=0, columnspan=3)
+        listbox.grid(row=2, column=0, columnspan=3)
+        resetBtn.grid(row=4, column=0, columnspan=3)
+        openFolderBtn.grid(row=3, column=0, columnspan=3)
+        
+def openFolder():
+    folderPath = os.path.normpath(folder_selected)
+
+    if os.path.isdir(folderPath):
+        subprocess.run([FILEBROWSER_PATH, folderPath])
+    elif os.path.isfile(folderPath):
+        subprocess.run([FILEBROWSER_PATH, '/select,', folderPath])
+        
+def encryptFiles(filesList):
+    for fileName in filesList:
+        if '.knight' not in fileName:
+            with open(fileName, 'rb') as fo:
+                plaintext = fo.read()
+            aes_key, iv = load_encryption_config()
+            public_key, private_key = read_keys()
+            encrypted_data = encrypt(plaintext, public_key, aes_key, iv)
+            with open(fileName + ".knight", 'wb') as fo:
+                fo.write(encrypted_data[2])
+            os.remove(fileName)
+                
+def decryptFiles(filesList):
+    for fileName in filesList:
+        if '.knight' in fileName:
+            with open(fileName, 'rb') as fo:
+                plaintext = fo.read()
+            aes_key, iv = load_encryption_config()
+            public_key, private_key = read_keys()
+            
+            encrypt_aes_key, encryptor = encrypt_aes(public_key, aes_key, iv)
+            
+            decrypted_data = decrypt(plaintext, private_key, encrypt_aes_key, iv)
+            output_filename = fileName[:-7] if fileName.endswith('.knight') else fileName + '_decrypted'
+            with open(output_filename, 'wb') as fo:
+                fo.write(decrypted_data)
+            os.remove(fileName)
+        
+def encryptProcess():
+    if folder_selected == 'FOLDER PATH' or folder_selected == '':
+        messagebox.showerror("Unable to encrypt", "Please select a folder!")
+    else:
+        allFiles = list(filter(lambda encFile: encFile.split("\\")[len(encFile.split("\\")) - 1] != os.path.basename(sys.executable), allfiles()))
+        encFilesList = [allFiles[x:x+processCount] for x in range(0, len(allFiles), processCount)]
+        global processes
+        for fileList in encFilesList:
+            p = multiprocessing.Process(name="encrypt", target=encryptFiles, args=(fileList,))
+            p.start()
+            processes.append(p)
+
+        for process in processes:
+            process.join()
+        resetListBox()
+        messagebox.showinfo("showinfo", "Encryption Done!")
+    
+def decryptProcess():
+    if folder_selected == 'FOLDER PATH' or folder_selected == '':
+        messagebox.showerror("Unable to decrypt", "Please select a folder!")
+    else:
+        allFiles = list(filter(lambda encFile: encFile.split("\\")[len(encFile.split("\\")) - 1] != os.path.basename(sys.executable), allfiles()))
+        encFilesList = [allFiles[x:x+processCount] for x in range(0, len(allFiles), processCount)]
+        global processes
+        for fileList in encFilesList:
+            p = multiprocessing.Process(name="decrypt", target=decryptFiles, args=(fileList,))
+            p.start()
+            processes.append(p)
+
+        for process in processes:
+            process.join()
+        resetListBox()
+        messagebox.showinfo("showinfo", "Decryption Done!")
+    
+def resetListBox():
+    listbox.delete(0,END)
+    for f, file in enumerate(allfiles()):
+        listbox.insert(f, file)
+        
+def resetAll():
+    global folder_selected
+    folder_selected = 'FOLDER PATH'
+    path["text"] = folder_selected
+    listbox.delete(0,END)
+    listbox.grid_forget()
+    path.grid_forget()
+    resetBtn.grid_forget()
+    openFolderBtn.grid_forget()
+
+def main():
+    root.title("Encrypt/Decrypt")
+    root.resizable(False, False)
+    root.eval('tk::PlaceWindow . center')
+
+    global path, listbox, resetBtn, openFolderBtn
+
+    #Buttons
+    path = Label(root, text='FOLDER PATH', pady=5, width=54 )
+    browse = Button(root, text="Browse", padx=40, pady=5, command=lambda: browseFolder())
+    enc = Button(root, text="Encrypt", padx=40, pady=5, command=lambda: encryptProcess())
+    dec = Button(root, text="Decrypt", padx=40, pady=5, command=lambda: decryptProcess())
+    listbox = Listbox(root, width=65, height=5)
+    resetBtn = Button(root, text="Reset", padx=40, pady=5, command=lambda: resetAll(), width=43)
+    openFolderBtn = Button(root, text="Open Folder", padx=40, pady=5, command=lambda: openFolder(), width=43)
+
+    #Positioning
+    browse.grid(row=1, column=0)
+    enc.grid(row=1, column=1)
+    dec.grid(row=1, column=2)
 
 if __name__ == "__main__":
-    args = parse_arguments()
+    multiprocessing.freeze_support()
     
-    try:
-        if args.generate_keys:
-            public_key, private_key, aes_key, iv = generate_keys()
-            print("New keys generated successfully")
-        else:
-            try:
-                # Try to read existing keys
-                with open("public_key.pem", "rb") as f:
-                    public_key = serialization.load_pem_public_key(f.read())
-                with open("private_key.pem", "rb") as f:
-                    private_key = serialization.load_pem_private_key(f.read(), password=None)
-                print("Using existing RSA keys")
-            except FileNotFoundError:
-                # If keys don't exist, generate new ones
-                public_key, private_key, _, _ = generate_keys()
-                print("No existing keys found. Generated new RSA keys")
-                
-        # Always generate new AES key and IV for each encryption
-        # For encryption mode, try to load existing config or generate new keys
-        if args.mode == 'encrypt':
-            if args.generate_keys or not os.path.exists('encryption_config.json'):
-                aes_key = os.urandom(32)  # 256-bit key
-                iv = os.urandom(16)  # 128-bit IV
-                print("Generating new AES key and IV")
-            else:
-                # Use existing encryption configuration
-                try:
-                    encrypted_aes_existing, iv = load_encryption_config()
-                    # We need to decrypt the existing AES key
-                    aes_key = private_key.decrypt(
-                        encrypted_aes_existing,
-                        padding.OAEP(
-                            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                            algorithm=hashes.SHA256(),
-                            label=None
-                        )
-                    )
-                    print("Using existing AES key and IV")
-                except Exception as e:
-                    print(f"Error loading existing encryption config: {str(e)}")
-                    sys.exit(1)
-    except Exception as e:
-        print(f"Error: {str(e)}")
-        sys.exit(1)
+    if not os.path.exists('public_key.pem') and not os.path.exists('private_key.pem'):
+        generate_rsa_keypair()
         
-    if args.mode == 'encrypt':
-        encrypted_aes, iv, ciphertext = encrypt(args.data, public_key, aes_key, iv)
-        if args.generate_keys or not os.path.exists('encryption_config.json'):
-            save_encryption_config(encrypted_aes, iv)
-            print("Encryption configuration saved to encryption_config.json")
-        print(f"Encrypted data: {ciphertext.hex()}")
-    else:
-        try:
-            ciphertext = bytes.fromhex(args.data)
-            encrypted_aes, iv = load_encryption_config()
-            decrypted_data = decrypt(ciphertext, private_key, encrypted_aes, iv)
-            print(f"Decrypted data: {decrypted_data}")
-        except ValueError as e:
-            print(f"Error: Invalid hex value provided - {str(e)}")
-            sys.exit(1)
+    if not os.path.exists('encryption_config.json'):
+        aes_key, iv = generate_aes_keys()
+        public_key, private_key = read_keys()
+        encrypted_aes, iv, ciphertext = encrypt("", public_key, aes_key, iv)
+        save_encryption_config(aes_key, iv)
+        print("Encryption configuration saved to encryption_config.json")
+    
+    root = Tk()
+    main()
+    root.mainloop()
