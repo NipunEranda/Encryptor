@@ -62,19 +62,15 @@ def generate_keys():
     
     return public_key, private_key, aes_key, iv
 
-def save_encryption_config(aes):
-    config = {
-        'aes': aes.hex()
-    }
-    with open('encryption_config.json', 'w') as f:
-        json.dump(config, f, indent=4)
+def save_aes(aes):
+    with open('aes.key', 'wb') as fo:
+        fo.write(aes)
     print("Encryption configuration saved.")
 
 def load_aes_key():
     try:
-        with open('encryption_config.json', 'r') as f:
-            config = json.load(f)
-            return bytes.fromhex(config['aes'])
+        with open("aes.key", 'rb') as fo:
+            return bytes.fromhex(fo.read())
     except FileNotFoundError:
         print("Error: encryption_config.json not found. Please encrypt data first.")
         sys.exit(1)

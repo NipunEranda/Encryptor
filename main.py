@@ -7,7 +7,7 @@ import sys
 import subprocess
 import multiprocessing
 
-from scripts.key_generator import read_keys, generate_aes_key, save_encryption_config, generate_rsa_keypair, load_aes_key, generate_iv
+from scripts.key_generator import read_keys, generate_aes_key, save_aes, generate_rsa_keypair, load_aes_key, generate_iv
 from scripts.encryption import encrypt, decrypt, encrypt_aes
 
 if sys.platform == "win32":
@@ -166,12 +166,12 @@ if __name__ == "__main__":
     if not os.path.exists('public_key.pem') and not os.path.exists('private_key.pem'):
         generate_rsa_keypair()
         
-    if not os.path.exists('encryption_config.json'):
+    if not os.path.exists('aes.key'):
         aes_key = generate_aes_key()
         public_key, private_key = read_keys()
         encrypted_aes, iv, ciphertext = encrypt("", public_key, aes_key, generate_iv())
-        save_encryption_config(aes_key)
-        print("Encryption configuration saved to encryption_config.json")
+        save_aes(aes_key)
+        print("Encryption configuration saved to aes.key")
     
     root = Tk()
     main()
