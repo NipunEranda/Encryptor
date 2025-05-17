@@ -72,6 +72,4 @@ pylint-global.rc
 *.log
 
 venv/
-
-**/*.pem
-**/*.json
+/.keys

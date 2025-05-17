@@ -1,2 +1,10 @@
 #!/bin/zsh
-pyinstaller --onefile main.py
+
+if [ "$1" = "build" ] && [ "$2" = "linux" ]; then
+    pyinstaller --onefile main.py
+elif [ "$1" = "clean" ]; then
+    rm -r build
+    rm -r dist
+    rm main.spec
+    rm -r .keys
+fi

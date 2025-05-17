@@ -7,14 +7,20 @@ from cryptography.hazmat.backends import default_backend
 import os
 import sys
 import json
-import json
+
+def get_base_path():
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.dirname(__file__))
+
+KEYS_DIR = os.path.join(get_base_path(), '.keys')
 
 def read_keys():
     public_key, private_key = None, None
-    with open("public_key.pem", "rb") as f:
+    with open(os.path.join(KEYS_DIR, "public_key.pem"), "rb") as f:
         public_key = serialization.load_pem_public_key(f.read())
 
-    with open("private_key.pem", "rb") as f:
+    with open(os.path.join(KEYS_DIR, "private_key.pem"), "rb") as f:
         private_key = serialization.load_pem_private_key(f.read(), password=None)
         
     return public_key, private_key
@@ -38,15 +44,19 @@ def generate_rsa_keypair():
         format=serialization.PublicFormat.SubjectPublicKeyInfo
     )
 
-    if not os.path.exists("private_key.pem"):
-        with open("private_key.pem", "wb") as f:
+    os.makedirs(KEYS_DIR, exist_ok=True)
+    private_key_path = os.path.join(KEYS_DIR, "private_key.pem")
+    public_key_path = os.path.join(KEYS_DIR, "public_key.pem")
+
+    if not os.path.exists(private_key_path):
+        with open(private_key_path, "wb") as f:
             f.write(pem_private_key)
 
-    if not os.path.exists("public_key.pem"):
-        with open("public_key.pem", "wb") as f:
+    if not os.path.exists(public_key_path):
+        with open(public_key_path, "wb") as f:
             f.write(pem_public_key)
 
-    print("RSA keys generated and saved.")
+    print("RSA keys generated and saved in the .keys directory.")
     
 def generate_aes_key():
     return os.urandom(32)
@@ -63,16 +73,19 @@ def generate_keys():
     return public_key, private_key, aes_key, iv
 
 def save_aes(aes):
-    with open('aes.key', 'wb') as fo:
+    os.makedirs(KEYS_DIR, exist_ok=True)
+    with open(os.path.join(KEYS_DIR, 'aes.key'), 'wb') as fo:
         fo.write(aes)
-    print("Encryption configuration saved.")
+        
+    print(f"AES key saved to: {os.path.join(KEYS_DIR, 'aes.key')}")
+    print("Encryption configuration saved in the keys directory.")
 
 def load_aes_key():
     try:
-        with open("aes.key", 'rb') as fo:
-            return bytes.fromhex(fo.read())
+        with open(os.path.join(KEYS_DIR, "aes.key"), 'rb') as fo:
+            return fo.read()
     except FileNotFoundError:
-        print("Error: encryption_config.json not found. Please encrypt data first.")
+        print("Error: aes.key not found in the keys directory. Please encrypt data first.")
         sys.exit(1)
     except (KeyError, ValueError) as e:
         print(f"Error reading configuration: {str(e)}")
