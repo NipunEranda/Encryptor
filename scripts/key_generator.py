@@ -48,30 +48,33 @@ def generate_rsa_keypair():
 
     print("RSA keys generated and saved.")
     
-def generate_aes_keys():
-    return os.urandom(32), os.urandom(16)
+def generate_aes_key():
+    return os.urandom(32)
+
+def generate_iv():
+    return os.urandom(16)
 
 def generate_keys():
     generate_rsa_keypair()
     public_key, private_key = read_keys()
-    aes_key, iv = generate_aes_keys()
+    aes_key = generate_aes_key()
+    iv = generate_iv()
     
     return public_key, private_key, aes_key, iv
 
-def save_encryption_config(aes, iv):
+def save_encryption_config(aes):
     config = {
-        'aes': aes.hex(),
-        'iv': iv.hex()
+        'aes': aes.hex()
     }
     with open('encryption_config.json', 'w') as f:
         json.dump(config, f, indent=4)
     print("Encryption configuration saved.")
 
-def load_encryption_config():
+def load_aes_key():
     try:
         with open('encryption_config.json', 'r') as f:
             config = json.load(f)
-            return bytes.fromhex(config['aes']), bytes.fromhex(config['iv'])
+            return bytes.fromhex(config['aes'])
     except FileNotFoundError:
         print("Error: encryption_config.json not found. Please encrypt data first.")
         sys.exit(1)

@@ -3,7 +3,7 @@ from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.backends import default_backend
-from scripts.key_generator import generate_aes_keys
+from scripts.key_generator import generate_aes_key
 import os
 
 def encrypt_aes(public_key, aes_key, iv):

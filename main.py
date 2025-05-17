@@ -7,7 +7,7 @@ import sys
 import subprocess
 import multiprocessing
 
-from scripts.key_generator import read_keys, generate_aes_keys, save_encryption_config, generate_rsa_keypair, load_encryption_config
+from scripts.key_generator import read_keys, generate_aes_key, save_encryption_config, generate_rsa_keypair, load_aes_key, generate_iv
 from scripts.encryption import encrypt, decrypt, encrypt_aes
 
 if sys.platform == "win32":
@@ -62,11 +62,13 @@ def encryptFiles(filesList):
         if '.knight' not in fileName:
             with open(fileName, 'rb') as fo:
                 plaintext = fo.read()
-            aes_key, iv = load_encryption_config()
+            aes_key = load_aes_key()
             public_key, private_key = read_keys()
+            iv = generate_iv()
             encrypted_data = encrypt(plaintext, public_key, aes_key, iv)
             with open(fileName + ".knight", 'wb') as fo:
-                fo.write(encrypted_data[2])
+                fo.write(iv)  # Write the IV first
+                fo.write(encrypted_data[2])  # Then write the encrypted data
             os.remove(fileName)
                 
 def decryptFiles(filesList):
@@ -74,8 +76,11 @@ def decryptFiles(filesList):
         if '.knight' in fileName:
             with open(fileName, 'rb') as fo:
                 plaintext = fo.read()
-            aes_key, iv = load_encryption_config()
+            aes_key = load_aes_key()
             public_key, private_key = read_keys()
+            
+            iv = plaintext[:16]
+            plaintext = plaintext[16:]
             
             encrypt_aes_key, encryptor = encrypt_aes(public_key, aes_key, iv)
             
@@ -162,10 +167,10 @@ if __name__ == "__main__":
         generate_rsa_keypair()
         
     if not os.path.exists('encryption_config.json'):
-        aes_key, iv = generate_aes_keys()
+        aes_key = generate_aes_key()
         public_key, private_key = read_keys()
-        encrypted_aes, iv, ciphertext = encrypt("", public_key, aes_key, iv)
-        save_encryption_config(aes_key, iv)
+        encrypted_aes, iv, ciphertext = encrypt("", public_key, aes_key, generate_iv())
+        save_encryption_config(aes_key)
         print("Encryption configuration saved to encryption_config.json")
     
     root = Tk()
