@@ -144,7 +144,11 @@ def main():
     root.resizable(False, False)
     root.eval('tk::PlaceWindow . center')
 
-    global path, listbox, resetBtn, openFolderBtn
+    global path, listbox, resetBtn, openFolderBtn, folder_selected
+
+    folder_selected = sys.argv[1] if len(sys.argv) > 1 else 'FOLDER PATH'
+
+    print("Folder selected: ", folder_selected)
 
     #Buttons
     path = Label(root, text='FOLDER PATH', pady=5, width=54 )
@@ -159,6 +163,16 @@ def main():
     browse.grid(row=1, column=0)
     enc.grid(row=1, column=1)
     dec.grid(row=1, column=2)
+
+    if(folder_selected != 'FOLDER PATH'):
+        path["text"] = folder_selected
+        listbox.delete(0,END)
+        for f, file in enumerate(allfiles()):
+            listbox.insert(f, file)
+        path.grid(row=0, column=0, columnspan=3)
+        listbox.grid(row=2, column=0, columnspan=3)
+        resetBtn.grid(row=4, column=0, columnspan=3)
+        openFolderBtn.grid(row=3, column=0, columnspan=3)
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()

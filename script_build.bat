@@ -1,0 +1,1 @@
+python -m PyInstaller --onefile --noconsole --hidden-import=cryptography --icon=app.ico encryptor.py

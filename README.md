@@ -40,17 +40,17 @@ The tool can be run using the provided `run` script or directly with Python.
 
 1. Generate new keys and encrypt data:
 ```bash
-python main.py --mode encrypt --data "Your secret message" --generate-keys
+python encryptor.py --mode encrypt --data "Your secret message" --generate-keys
 ```
 
 2. Encrypt data using existing keys:
 ```bash
-python main.py --mode encrypt --data "Your secret message"
+python encryptor.py --mode encrypt --data "Your secret message"
 ```
 
 3. Decrypt data:
 ```bash
-python main.py --mode decrypt --data "<encrypted-hex-string>"
+python encryptor.py --mode decrypt --data "<encrypted-hex-string>"
 ```
 
 ### Using the Run Script
@@ -72,7 +72,7 @@ This will create a standalone executable in the `dist` directory.
 
 ## Project Structure
 
-- `main.py`: Main application entry point and CLI interface
+- `encryptor.py`: Main application entry point and CLI interface
 - `scripts/encryption.py`: Core encryption/decryption functions
 - `scripts/key_generator.py`: Key generation and management
 

@@ -1,10 +1,10 @@
 #!/bin/zsh
 
 if [ "$1" = "build" ] && [ "$2" = "linux" ]; then
-    pyinstaller --onefile main.py
+    python -m PyInstaller --onefile --noconsole --hidden-import=cryptography --icon=app.ico encryptor.py
 elif [ "$1" = "clean" ]; then
     rm -r build
     rm -r dist
-    rm main.spec
+    rm Encryptor.spec
     rm -r .keys
 fi
