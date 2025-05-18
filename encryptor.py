@@ -78,13 +78,13 @@ def decryptFiles(filesList):
                 plaintext = fo.read()
             aes_key = load_aes_key()
             public_key, private_key = read_keys()
-            
             iv = plaintext[:16]
             plaintext = plaintext[16:]
             
-            encrypt_aes_key, encryptor = encrypt_aes(public_key, aes_key, iv)
+            # We only need the encrypted_aes_key from encrypt_aes
+            encrypted_aes_key, _ = encrypt_aes(public_key, aes_key, iv)
             
-            decrypted_data = decrypt(plaintext, private_key, encrypt_aes_key, iv)
+            decrypted_data = decrypt(plaintext, private_key, encrypted_aes_key, iv)
             output_filename = fileName[:-7] if fileName.endswith('.knight') else fileName + '_decrypted'
             with open(output_filename, 'wb') as fo:
                 fo.write(decrypted_data)
@@ -177,15 +177,26 @@ def main():
 if __name__ == "__main__":
     multiprocessing.freeze_support()
     
-    if not os.path.exists('public_key.pem') and not os.path.exists('private_key.pem'):
+    # Get the path to the keys directory from key_generator module
+    from scripts.key_generator import KEYS_DIR
+    
+    # Make sure the key directory exists
+    os.makedirs(KEYS_DIR, exist_ok=True)
+    
+    # Check for key files in the keys directory
+    public_key_path = os.path.join(KEYS_DIR, 'public_key.pem')
+    private_key_path = os.path.join(KEYS_DIR, 'private_key.pem')
+    aes_key_path = os.path.join(KEYS_DIR, 'aes.key')
+    
+    if not os.path.exists(public_key_path) and not os.path.exists(private_key_path):
         generate_rsa_keypair()
         
-    if not os.path.exists('aes.key'):
+    if not os.path.exists(aes_key_path):
         aes_key = generate_aes_key()
         public_key, private_key = read_keys()
         encrypted_aes, iv, ciphertext = encrypt("", public_key, aes_key, generate_iv())
         save_aes(aes_key)
-        print("Encryption configuration saved to aes.key")
+        print(f"Encryption configuration saved to {aes_key_path}")
     
     root = Tk()
     main()

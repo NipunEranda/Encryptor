@@ -13,7 +13,16 @@ def get_base_path():
         return os.path.dirname(sys.executable)
     return os.path.dirname(os.path.dirname(__file__))
 
-KEYS_DIR = os.path.join(get_base_path(), '.keys')
+def get_keys_dir():
+    # Store keys in user's AppData directory instead of app directory
+    # to avoid permission issues in protected directories like Program Files
+    if sys.platform == "win32":
+        app_data = os.path.join(os.environ.get('APPDATA', ''), 'Encryptor')
+    else:
+        app_data = os.path.join(os.path.expanduser('~'), '.encryptor')
+    return os.path.join(app_data, '.keys')
+
+KEYS_DIR = get_keys_dir()
 
 def read_keys():
     public_key, private_key = None, None
